@@ -203,13 +203,13 @@ def render_sidebar() -> None:
                 if key.startswith(("loan_pct_", "loan_term_")):
                     st.session_state.pop(key, None)
             for key in (
-                "session_id",
-                "user_context",
-                "chat_history",
-                "last_vehicle",
-                "show_loan",
-                "loan_term",
-                "pending_user_input",
+                    "session_id",
+                    "user_context",
+                    "chat_history",
+                    "last_vehicle",
+                    "show_loan",
+                    "loan_term",
+                    "pending_user_input",
             ):
                 st.session_state.pop(key, None)
             st.rerun()
@@ -238,25 +238,28 @@ def render_loan_inline(vehicle: dict[str, Any], turn_key: str) -> None:
         return
 
     committed_pct = int(st.session_state.user_context.get("loan_preference_pct", 70))
+    committed_term = int(st.session_state.loan_term)
+
     slider_key = f"loan_pct_{turn_key}"
     term_key = f"loan_term_{turn_key}"
-
-    if slider_key not in st.session_state:
-        st.session_state[slider_key] = committed_pct
-    if term_key not in st.session_state:
-        st.session_state[term_key] = int(st.session_state.loan_term)
 
     with st.expander("💰 Phương án trả góp (nháp — chưa lưu)", expanded=True):
         cols = st.columns(2)
         with cols[0]:
             draft_pct = st.slider(
-                "Tỷ lệ vay (%)", 0, 80, step=5, key=slider_key
+                "Tỷ lệ vay (%)",
+                0,
+                80,
+                value=committed_pct,
+                step=5,
+                key=slider_key,
             )
         with cols[1]:
             try:
-                term_idx = TERM_OPTIONS.index(int(st.session_state[term_key]))
+                term_idx = TERM_OPTIONS.index(committed_term)
             except ValueError:
                 term_idx = len(TERM_OPTIONS) - 1
+
             draft_term = st.selectbox(
                 "Kỳ hạn (tháng)",
                 TERM_OPTIONS,
@@ -274,9 +277,7 @@ def render_loan_inline(vehicle: dict[str, Any], turn_key: str) -> None:
         m2.metric("Trả góp / tháng", fmt_vnd(result["monthly_payment_vnd"]))
         st.caption(result["disclaimer"])
 
-        dirty = int(draft_pct) != committed_pct or int(draft_term) != int(
-            st.session_state.loan_term
-        )
+        dirty = int(draft_pct) != committed_pct or int(draft_term) != committed_term
         if dirty:
             st.warning(
                 f"Bạn đang xem thử mức **{draft_pct}% / {draft_term} tháng**. "
@@ -288,7 +289,7 @@ def render_loan_inline(vehicle: dict[str, Any], turn_key: str) -> None:
                         "field": "loan_percentage",
                         "from": committed_pct,
                         "to": int(draft_pct),
-                        "term_from": int(st.session_state.loan_term),
+                        "term_from": committed_term,
                         "term_to": int(draft_term),
                         "session_id": st.session_state.session_id,
                     }
@@ -310,15 +311,15 @@ def render_inline_actions(vehicle: dict[str, Any], turn_key: str) -> None:
     with col_loan:
         if not st.session_state.show_loan:
             if st.button(
-                "💰 Xem phương án trả góp", key=f"show_loan_{turn_key}"
+                    "💰 Xem phương án trả góp", key=f"show_loan_{turn_key}"
             ):
                 st.session_state.show_loan = True
                 st.rerun()
     with col_book:
         if st.button(
-            "📅 Đặt lịch lái thử",
-            type="primary",
-            key=f"book_{turn_key}",
+                "📅 Đặt lịch lái thử",
+                type="primary",
+                key=f"book_{turn_key}",
         ):
             model_id = vehicle.get("model_id", "")
             st.session_state.pending_user_input = (
