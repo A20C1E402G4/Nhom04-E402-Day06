@@ -1,0 +1,37 @@
+{
+  "tco_constants": {
+    "current_electricity_price_vnd_per_kwh": 3858,
+    "average_gas_price_vnd_per_liter": 24000,
+    "co2_emission_reduction_kg_per_km": 0.15
+  },
+  "charging_stations": {
+    "ST_VT01": {
+      "location_name": "Trạm dừng chân cao tốc Long Thành",
+      "address": "Cao tốc TPHCM - Long Thành - Dầu Giây",
+      "coordinates": {"lat": 10.7412, "lng": 107.0112},
+      "charger_types": ["DC 60kW", "DC 250kW"],
+      "status": "operational"
+    },
+    "ST_VT02": {
+      "location_name": "Vincom Plaza Vũng Tàu",
+      "address": "Phường 7, TP Vũng Tàu",
+      "coordinates": {"lat": 10.3541, "lng": 107.0858},
+      "charger_types": ["AC 11kW", "DC 60kW"],
+      "status": "operational"
+    },
+    "ST_HCM01": {
+      "location_name": "Khu công nghệ cao Quận 9",
+      "address": "Phường Tân Phú, TP Thủ Đức (Quận 9)",
+      "coordinates": {"lat": 10.8461, "lng": 106.7930},
+      "charger_types": ["AC 11kW", "DC 250kW"],
+      "status": "operational"
+    },
+    "ST_HCM02": {
+      "location_name": "Vincom Center Đồng Khởi",
+      "address": "72 Lê Thánh Tôn, Quận 1",
+      "coordinates": {"lat": 10.7779, "lng": 106.7020},
+      "charger_types": ["AC 11kW"],
+      "status": "operational"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "SR_Q9": {
+    "showroom_name": "VinFast Thảo Điền",
+    "address": "Vincom Mega Mall Thảo Điền, TP Thủ Đức",
+    "district": "Thủ Đức",
+    "coordinates": {
+      "lat": 10.8023,
+      "lng": 106.7402
+    },
+    "available_test_drive_models": ["VF5", "VF6", "VF7"],
+    "available_time_slots": [
+      "2026-04-10T09:00:00",
+      "2026-04-10T14:30:00",
+      "2026-04-11T10:00:00"
+    ]
+  },
+  "SR_Q1": {
+    "showroom_name": "VinFast Đồng Khởi",
+    "address": "Vincom Center Đồng Khởi, Quận 1",
+    "district": "Quận 1",
+    "coordinates": {
+      "lat": 10.7779,
+      "lng": 106.7020
+    },
+    "available_test_drive_models": ["VF7", "VF8", "VF9"],
+    "available_time_slots": [
+      "2026-04-10T11:00:00",
+      "2026-04-12T15:00:00"
+    ]
+  }
+}

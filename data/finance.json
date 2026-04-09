@@ -1,0 +1,30 @@
+{
+  "banking_partners": {
+    "vietcombank": {
+      "bank_name": "Vietcombank",
+      "interest_rate_percent_per_year": 8.5,
+      "max_loan_percentage": 80,
+      "max_duration_months": 96
+    },
+    "techcombank": {
+      "bank_name": "Techcombank",
+      "interest_rate_percent_per_year": 9.0,
+      "max_loan_percentage": 85,
+      "max_duration_months": 84
+    }
+  },
+  "current_promotions": [
+    {
+      "promo_code": "VF7_FREE_CHARGE_1YR",
+      "applicable_models": ["VF7", "VF8"],
+      "discount_amount_vnd": 0,
+      "description": "Miễn phí sạc pin tại trạm công cộng trong 1 năm"
+    },
+    {
+      "promo_code": "VF5_REG_FEE_WAIVER",
+      "applicable_models": ["VF5"],
+      "discount_amount_vnd": 20000000,
+      "description": "Hỗ trợ 20 triệu phí trước bạ cho VF 5"
+    }
+  ]
+}
