@@ -1,4 +1,143 @@
 {
+  "SR_HN_OP1": {
+    "showroom_name": "VinFast Ocean Park",
+    "address": "Vincom Mega Mall Ocean Park, Gia Lâm, Hà Nội",
+    "district": "Gia Lâm",
+    "coordinates": {
+      "lat": 20.9941,
+      "lng": 105.9458
+    },
+    "available_test_drive_models": [
+      "VF3",
+      "VF5",
+      "VF6",
+      "VF7",
+      "VF8",
+      "VF9"
+    ],
+    "available_time_slots": [
+      "2026-04-10T08:30:00",
+      "2026-04-10T15:00:00",
+      "2026-04-11T09:00:00",
+      "2026-04-11T16:00:00"
+    ]
+  },
+  "SR_HN_SC": {
+    "showroom_name": "VinFast Smart City",
+    "address": "Vincom Mega Mall Smart City, Nam Từ Liêm, Hà Nội",
+    "district": "Nam Từ Liêm",
+    "coordinates": {
+      "lat": 21.0035,
+      "lng": 105.7422
+    },
+    "available_test_drive_models": [
+      "VF3",
+      "VF5",
+      "VF6",
+      "VF7"
+    ],
+    "available_time_slots": [
+      "2026-04-10T10:00:00",
+      "2026-04-10T14:00:00",
+      "2026-04-12T09:30:00"
+    ]
+  },
+  "SR_HN_BT": {
+    "showroom_name": "VinFast Bà Triệu",
+    "address": "Vincom Center Bà Triệu, 191 Bà Triệu, Hai Bà Trưng, Hà Nội",
+    "district": "Hai Bà Trưng",
+    "coordinates": {
+      "lat": 21.0112,
+      "lng": 105.8491
+    },
+    "available_test_drive_models": [
+      "VF7",
+      "VF8",
+      "VF9"
+    ],
+    "available_time_slots": [
+      "2026-04-10T11:00:00",
+      "2026-04-11T14:30:00",
+      "2026-04-12T10:00:00"
+    ]
+  },
+  "SR_HN_RT": {
+    "showroom_name": "VinFast Royal City",
+    "address": "Tầng B2, Vincom Mega Mall Royal City, Thanh Xuân, Hà Nội",
+    "district": "Thanh Xuân",
+    "coordinates": {
+      "lat": 21.0028,
+      "lng": 105.8152
+    },
+    "available_test_drive_models": [
+      "VF5",
+      "VF6",
+      "VF7",
+      "VF8"
+    ],
+    "available_time_slots": [
+      "2026-04-10T09:00:00",
+      "2026-04-10T16:30:00",
+      "2026-04-11T11:00:00"
+    ]
+  },
+  "SR_HN_LB": {
+    "showroom_name": "VinFast Long Biên",
+    "address": "Số 1 Nguyễn Văn Linh, Long Biên, Hà Nội",
+    "district": "Long Biên",
+    "coordinates": {
+      "lat": 21.0432,
+      "lng": 105.9123
+    },
+    "available_test_drive_models": [
+      "VF3",
+      "VF5",
+      "VF6",
+      "VF7",
+      "VF8",
+      "VF9"
+    ],
+    "available_time_slots": [
+      "2026-04-10T08:00:00",
+      "2026-04-11T13:30:00",
+      "2026-04-13T09:00:00"
+    ]
+  },
+  "SR_HN_NCT": {
+    "showroom_name": "VinFast Nguyễn Chí Thanh",
+    "address": "Vincom Center Nguyễn Chí Thanh, Đống Đa, Hà Nội",
+    "district": "Đống Đa",
+    "coordinates": {
+      "lat": 21.0238,
+      "lng": 105.8105
+    },
+    "available_test_drive_models": [
+      "VF6",
+      "VF7",
+      "VF8"
+    ],
+    "available_time_slots": [
+      "2026-04-10T10:30:00",
+      "2026-04-12T15:00:00"
+    ]
+  },
+  "SR_HN_TP": {
+    "showroom_name": "VinFast TechnoPark",
+    "address": "Tòa nhà TechnoPark, Gia Lâm, Hà Nội",
+    "district": "Gia Lâm",
+    "coordinates": {
+      "lat": 20.9912,
+      "lng": 105.9422
+    },
+    "available_test_drive_models": [
+      "VF8",
+      "VF9"
+    ],
+    "available_time_slots": [
+      "2026-04-10T09:00:00",
+      "2026-04-10T14:00:00"
+    ]
+  },
   "SR_Q9": {
     "showroom_name": "VinFast Thảo Điền",
     "address": "Vincom Mega Mall Thảo Điền, TP Thủ Đức",
@@ -7,11 +146,19 @@
       "lat": 10.8023,
       "lng": 106.7402
     },
-    "available_test_drive_models": ["VF5", "VF6", "VF7"],
+    "available_test_drive_models": [
+      "VF3",
+      "VF5",
+      "VF6",
+      "VF7",
+      "VF8"
+    ],
     "available_time_slots": [
       "2026-04-10T09:00:00",
       "2026-04-10T14:30:00",
-      "2026-04-11T10:00:00"
+      "2026-04-11T10:00:00",
+      "2026-04-12T09:00:00",
+      "2026-04-13T14:00:00"
     ]
   },
   "SR_Q1": {
@@ -20,12 +167,62 @@
     "district": "Quận 1",
     "coordinates": {
       "lat": 10.7779,
-      "lng": 106.7020
+      "lng": 106.702
     },
-    "available_test_drive_models": ["VF7", "VF8", "VF9"],
+    "available_test_drive_models": [
+      "VF7",
+      "VF8",
+      "VF9"
+    ],
     "available_time_slots": [
       "2026-04-10T11:00:00",
-      "2026-04-12T15:00:00"
+      "2026-04-11T15:00:00",
+      "2026-04-12T15:00:00",
+      "2026-04-13T10:00:00"
+    ]
+  },
+  "SR_HCM_TD": {
+    "showroom_name": "VinFast Tân Định",
+    "address": "Vincom Plaza Tân Định, Quận 1, TP.HCM",
+    "district": "Quận 1",
+    "coordinates": {
+      "lat": 10.7885,
+      "lng": 106.6975
+    },
+    "available_test_drive_models": [
+      "VF3",
+      "VF5",
+      "VF6",
+      "VF7"
+    ],
+    "available_time_slots": [
+      "2026-04-10T08:30:00",
+      "2026-04-10T13:00:00",
+      "2026-04-11T09:00:00",
+      "2026-04-12T14:00:00"
+    ]
+  },
+  "SR_HCM_GV": {
+    "showroom_name": "VinFast Gò Vấp",
+    "address": "Vincom Plaza Gò Vấp, Quận Gò Vấp, TP.HCM",
+    "district": "Gò Vấp",
+    "coordinates": {
+      "lat": 10.8326,
+      "lng": 106.6657
+    },
+    "available_test_drive_models": [
+      "VF3",
+      "VF5",
+      "VF6",
+      "VF7",
+      "VF8",
+      "VF9"
+    ],
+    "available_time_slots": [
+      "2026-04-10T09:00:00",
+      "2026-04-10T15:30:00",
+      "2026-04-11T10:00:00",
+      "2026-04-13T09:00:00"
     ]
   }
 }
