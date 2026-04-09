@@ -2,6 +2,8 @@
 
 VSSA là một trợ lý bán hàng thông minh (AI Agent) được thiết kế riêng cho hệ sinh thái xe điện VinFast. Dự án sử dụng kiến trúc Agentic Workflow để cung cấp trải nghiệm tư vấn cá nhân hóa, tính toán tài chính thời gian thực và tự động hóa quy trình đặt lịch lái thử.
 
+Video demo: https://drive.google.com/file/d/16YEelN6AOqRAZFIrNTP3zIOJXgGf9znQ/view?usp=drivesdk
+
 ---
 
 ## Mô tả tính năng cốt lõi
