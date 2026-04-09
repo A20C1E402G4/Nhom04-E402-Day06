@@ -118,7 +118,7 @@ def user_mentioned_loan(text: str) -> bool:
 
 # Available models — Local Qwen 2.5 first (default)
 MODEL_OPTIONS: dict[str, dict] = {
-    "🏠 Local — Qwen 2.5 (Ollama)": {"provider": "local", "model": "qwen2.5:7b"},
+    "🏠 Local — Qwen 2.5 (Ollama)": {"provider": "local", "model": "qwen2.5"},
     "🏠 Local — Qwen 2.5 14B (Ollama)": {"provider": "local", "model": "qwen2.5:14b"},
     "🏠 Local — Llama 3 8B (Ollama)": {"provider": "local", "model": "llama3:8b"},
     "☁️ OpenAI — GPT-4o": {"provider": "openai", "model": None},
@@ -133,7 +133,7 @@ def _make_provider(label: str):
 
 
 @st.cache_resource(show_spinner=False)
-def get_compiled_graph():
+def get_compiled_graph(_model_label: str):
     """Build the agent graph once with a SqliteSaver shared across reruns."""
     conn = sqlite3.connect(str(CHECKPOINT_DB_PATH), check_same_thread=False)
     saver = SqliteSaver(conn)
@@ -171,9 +171,10 @@ def init_session_state() -> None:
     st.session_state.setdefault("show_loan", False)
     st.session_state.setdefault("loan_term", 96)
     st.session_state.setdefault("pending_user_input", None)
+    st.session_state.setdefault("agent_status", "")
 
 
-def invoke_agent(user_text: str) -> str:
+def invoke_agent(user_text: str):
     label = st.session_state.get("model_label", list(MODEL_OPTIONS.keys())[0])
     app = get_compiled_graph(label)
     config = {"configurable": {"thread_id": st.session_state.session_id}}
@@ -182,9 +183,35 @@ def invoke_agent(user_text: str) -> str:
         "user_context": st.session_state.user_context,
         "tool_turns": 0,
     }
-    final_state = app.invoke(state_input, config=config)
-    last: AIMessage = final_state["messages"][-1]
-    return getattr(last, "content", "") or ""
+    
+    final_content = ""
+    # Use updates mode to see which node is running
+    for chunk in app.stream(state_input, config=config, stream_mode="updates"):
+        for node_name, output in chunk.items():
+            if node_name == "agent":
+                msg = output["messages"][-1]
+                if getattr(msg, "tool_calls", None):
+                    tool_names = [tc["name"] for tc in msg.tool_calls]
+                    readable_names = {
+                        "get_vehicle_data": "lấy thông số xe",
+                        "calculate_loan": "tính toán khoản vay",
+                        "find_showrooms": "tìm kiếm showroom",
+                        "get_promotion": "tra cứu khuyến mãi",
+                        "book_test_drive": "ghi nhận lịch hẹn",
+                        "find_charging_stations": "tìm kiếm trạm sạc"
+                    }
+                    display_tools = [readable_names.get(n, n) for n in tool_names]
+                    yield f"🤖 Agent đang {', '.join(display_tools)}..."
+                else:
+                    yield "✍️ Agent đang soạn câu trả lời..."
+            elif node_name == "tools":
+                yield "🛠️ Tools đang thực thi..."
+            
+            # Keep track of the last state to get the final message
+            if "messages" in output:
+                final_content = output["messages"][-1].content
+
+    yield final_content
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +236,16 @@ def render_sidebar() -> None:
             st.session_state.model_label = chosen
             st.rerun()
 
+        st.divider()
+        st.header("⚡ Trạng thái Agent")
+        # Fixed placeholder for real-time status updates from anywhere
+        st.session_state.sidebar_status_area = st.empty()
+        status = st.session_state.get("agent_status", "")
+        if status:
+            st.session_state.sidebar_status_area.info(status)
+        else:
+            st.session_state.sidebar_status_area.caption("Agent đang sẵn sàng.")
+        
         st.divider()
         st.header("🧠 Trí nhớ AI")
         st.caption("Sở thích AI đã học từ các lượt sửa lưng của bạn.")
@@ -339,6 +376,40 @@ def render_loan_inline(vehicle: dict[str, Any], turn_key: str) -> None:
             st.caption("_Mức hiện tại trùng với trí nhớ đã lưu._")
 
 
+def render_charging_map(stations: list[dict[str, Any]]) -> None:
+    """Render a map with charging station locations."""
+    if not stations:
+        return
+    
+    import pandas as pd
+    map_data = []
+    for s in stations:
+        name = s.get("location_name") or s.get("name") or s.get("station_name") or "Trạm sạc VinFast"
+        coords = s.get("coordinates") or s
+        lat = coords.get("lat")
+        lon = coords.get("lon") or coords.get("lng")
+        
+        if lat is not None and lon is not None:
+            map_data.append({
+                "name": name,
+                "lat": float(lat),
+                "lon": float(lon)
+            })
+    
+    if not map_data:
+        st.warning("Không có dữ liệu tọa độ để hiển thị bản đồ.")
+        return
+
+    df = pd.DataFrame(map_data)
+    st.subheader("📍 Bản đồ trạm sạc")
+    st.map(df)
+    for s in stations:
+        name = s.get("location_name") or s.get("name") or "Trạm sạc"
+        addr = s.get("address") or s.get("addr") or "Đang cập nhật địa chỉ"
+        types = s.get("charger_types") or []
+        st.caption(f"- **{name}**: {addr} ({', '.join(types)})")
+
+
 def render_inline_actions(vehicle: dict[str, Any], turn_key: str) -> None:
     """Render the CTA buttons + loan expander for the LATEST vehicle payload."""
     render_vehicle_summary(vehicle)
@@ -409,8 +480,21 @@ def render_chat(container) -> None:
                         render_inline_actions(vehicle, turn_key=f"turn{idx}")
 
                 # Booking confirmation styled success message.
+                # Assistant-specific inline content
                 if entry["role"] == "assistant":
                     payload = entry.get("payload") or {}
+                    
+                    # Charging stations map
+                    data = payload.get("charging_stations")
+                    if data:
+                        stations = []
+                        if isinstance(data, list):
+                            stations = data
+                        elif isinstance(data, dict):
+                            stations = data.get("stations", [])
+                        render_charging_map(stations)
+
+                    # Booking confirmation
                     if payload.get("cta") == "test_drive_booked":
                         sr = payload.get("showroom") or {}
                         st.success(
@@ -421,7 +505,7 @@ def render_chat(container) -> None:
                         )
 
 
-def process_user_message(prompt: str, container) -> None:
+def process_user_message(prompt: str, container, sidebar_status=None) -> None:
     """Append user msg, show skeleton, invoke agent, swap in real reply, rerun."""
     st.session_state.chat_history.append(
         {"role": "user", "content": prompt, "payload": None}
@@ -438,7 +522,20 @@ def process_user_message(prompt: str, container) -> None:
             placeholder.markdown(SKELETON_MD)
 
     try:
-        reply = invoke_agent(prompt)
+        reply = ""
+        # The generator yields status first, then final content
+        for status_or_content in invoke_agent(prompt):
+            if status_or_content.startswith(("🤖", "🛠️", "✍️")):
+                st.session_state.agent_status = status_or_content
+                placeholder.markdown(f"_{status_or_content}_")
+                # Update sidebar status in real-time using the placeholder
+                sb_area = st.session_state.get("sidebar_status_area")
+                if sb_area:
+                    sb_area.info(status_or_content)
+            else:
+                reply = status_or_content
+        
+        st.session_state.agent_status = "" # Clear status when done
     except Exception as exc:  # noqa: BLE001
         reply = f"⚠️ Lỗi gọi agent: `{exc}`"
         telemetry_logger.log_failed_intent(prompt, reason=str(exc))
@@ -489,7 +586,11 @@ def main() -> None:
     # Drain any queued input (from chat_input OR inline buttons).
     pending = st.session_state.pop("pending_user_input", None)
     if pending:
-        process_user_message(pending, chat_container)
+        process_user_message(
+            pending, 
+            chat_container, 
+            sidebar_status=st.session_state.get("sidebar_status_placeholder")
+        )
 
 
 main()

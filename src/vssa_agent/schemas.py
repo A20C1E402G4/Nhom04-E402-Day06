@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-VehicleModelId = Literal["VF5", "VF7", "VF8"]
+VehicleModelId = Literal["VF3", "VF5", "VF6","VF7", "VF8", "VF9", "VF_Wild"]
 BankId = Literal["vietcombank", "techcombank"]
 
 ALLOWED_DURATIONS_MONTHS: tuple[int, ...] = (12, 24, 36, 48, 60, 72, 84, 96)
@@ -104,3 +104,18 @@ class BookTestDriveArgs(BaseModel):
         if len(digits) < 8:
             raise ValueError("phone must contain at least 8 digits")
         return v
+
+
+
+class GetAllVehiclesArgs(BaseModel):
+    """Args for `get_all_vehicles`. Takes no parameters."""
+    pass
+
+
+class FindChargingStationsArgs(BaseModel):
+    """Args for `find_charging_stations`."""
+
+    query: str = Field(
+        default="",
+        description="Search query or area (e.g. 'Long Thành', 'Vũng Tàu'). May be empty.",
+    )

@@ -15,6 +15,7 @@ from .config import (
     load_finance,
     load_showrooms,
     load_vehicles,
+    load_charging_stations,
 )
 from .schemas import (
     BookTestDriveArgs,
@@ -22,6 +23,8 @@ from .schemas import (
     FindShowroomsArgs,
     GetPromotionArgs,
     GetVehicleDataArgs,
+    FindChargingStationsArgs,
+    GetAllVehiclesArgs,
 )
 
 try:  # pragma: no cover - telemetry is best-effort, never block business logic
@@ -134,7 +137,7 @@ def _find_showrooms_impl(model_id: str, district: str = "") -> dict[str, Any]:
 
 @tool("get_vehicle_data", args_schema=GetVehicleDataArgs)
 def get_vehicle_data(model_id: str) -> dict[str, Any]:
-    """Look up VinFast vehicle specifications and pricing by model id (VF5/VF7/VF8)."""
+    """Look up VinFast vehicle specifications and pricing by model id."""
     vehicles = load_vehicles()
     record = vehicles.get(model_id)
     if record is None:
@@ -243,10 +246,53 @@ def book_test_drive(
     )
 
 
+@tool("find_charging_stations", args_schema=FindChargingStationsArgs)
+def find_charging_stations(query: str = "") -> dict[str, Any]:
+    """Find VinFast charging stations by name, address, or district."""
+    data = load_charging_stations()
+    stations = data.get("charging_stations", {})
+    
+    matches = []
+    q = query.lower().strip()
+    
+    for sr_id, sr in stations.items():
+        # Simple text search across name, address
+        if (q in sr["location_name"].lower() or 
+            q in sr["address"].lower()):
+            matches.append({
+                "station_id": sr_id,
+                "location_name": sr["location_name"],
+                "address": sr["address"],
+                "coordinates": sr["coordinates"],
+                "charger_types": sr["charger_types"],
+                "status": sr["status"]
+            })
+            
+    if not matches:
+        return {
+            "found": False,
+            "message": f"Không tìm thấy trạm sạc nào tại '{query}'. Hãy thử tìm kiếm khu vực khác."
+        }
+        
+    return {
+        "found": True,
+        "stations": matches,
+        "disclaimer": "Lưu ý: Bn `` nA'i v>i khAch r_ng mAnh ch% l y thA'ng tin t dA liu cA3 s_n."
+    }
+
+
+@tool("get_all_vehicles", args_schema=GetAllVehiclesArgs)
+def get_all_vehicles() -> dict[str, Any]:
+    """Lấy danh sách đầy đủ tất cả các dòng xe VinFast và thông số chi tiết."""
+    return load_vehicles()
+
+
 TOOLS = [
     get_vehicle_data,
     calculate_loan,
     find_showrooms,
     get_promotion,
     book_test_drive,
+    find_charging_stations,
+    get_all_vehicles,
 ]

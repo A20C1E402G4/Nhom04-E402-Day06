@@ -1,52 +1,170 @@
 {
-  "VF5": {
-    "model_name": "VinFast VF 5 Plus",
+  "VF3": {
+    "model_name": "VinFast VF 3",
     "versions": {
-      "plus": {
-        "price_without_battery_vnd": 468000000,
-        "price_with_battery_vnd": 548000000,
-        "battery_subscription_fee_per_month_vnd": 1600000,
-        "max_range_km": 326.4,
-        "seats": 5,
+      "standard": {
+        "price_without_battery_vnd": 240000000,
+        "price_with_battery_vnd": 322000000,
+        "battery_subscription_fee_per_month_vnd": 900000,
+        "max_range_km": 210,
+        "seats": 4,
         "key_features": [
-          "Nhỏ gọn đi phố",
-          "Trợ lý ảo VinFast",
-          "Cảnh báo điểm mù"
+          "Thiết kế Mini SUV cá tính",
+          "Kích thước siêu nhỏ gọn cho đô thị",
+          "Màn hình giải trí 10 inch"
         ]
       }
     }
   },
-  "VF7": {
-    "model_name": "VinFast VF 7",
+  "VF6_Base": {
+    "model_name": "VinFast VF 6 Base",
     "versions": {
       "base": {
-        "price_without_battery_vnd": 850000000,
-        "price_with_battery_vnd": 1050000000,
-        "battery_subscription_fee_per_month_vnd": 2900000,
-        "max_range_km": 375,
+        "price_without_battery_vnd": 675000000,
+        "price_with_battery_vnd": 765000000,
+        "battery_subscription_fee_per_month_vnd": 1800000,
+        "max_range_km": 399,
         "seats": 5,
         "key_features": [
-          "Thiết kế thể thao 5 chỗ rộng rãi",
-          "Màn hình HUD",
-          "ADAS Level 2",
-          "Cốp rộng phù hợp gia đình"
+          "SUV cỡ B tối ưu không gian",
+          "Trợ lý ảo thông minh",
+          "Cập nhật phần mềm từ xa (FOTA)"
         ]
       }
     }
   },
-  "VF8": {
-    "model_name": "VinFast VF 8",
+  "VF6_Plus": {
+    "model_name": "VinFast VF 6 Plus",
     "versions": {
-      "eco": {
-        "price_without_battery_vnd": 1019000000,
-        "price_with_battery_vnd": 1259000000,
-        "battery_subscription_fee_per_month_vnd": 3100000,
-        "max_range_km": 420,
+      "plus": {
+        "price_without_battery_vnd": 765000000,
+        "price_with_battery_vnd": 855000000,
+        "battery_subscription_fee_per_month_vnd": 1800000,
+        "max_range_km": 381,
         "seats": 5,
         "key_features": [
-          "SUV cỡ D",
-          "ADAS Level 2+",
-          "Nội thất cao cấp"
+          "Công suất 201 mã lực mạnh mẽ",
+          "Hệ thống ADAS đầy đủ",
+          "Cửa sổ trời toàn cảnh"
+        ]
+      }
+    }
+  },
+  "VFe34": {
+    "model_name": "VinFast VF e34",
+    "versions": {
+      "standard": {
+        "price_without_battery_vnd": 710000000,
+        "price_with_battery_vnd": 830000000,
+        "battery_subscription_fee_per_month_vnd": 1900000,
+        "max_range_km": 285,
+        "seats": 5,
+        "key_features": [
+          "Mẫu xe điện đầu tiên của Việt Nam",
+          "Quản lý xe qua ứng dụng smartphone",
+          "Cốp điện tiện lợi"
+        ]
+      }
+    }
+  },
+  "VF7_Plus": {
+    "model_name": "VinFast VF 7 Plus",
+    "versions": {
+      "plus": {
+        "price_without_battery_vnd": 999000000,
+        "price_with_battery_vnd": 1199000000,
+        "battery_subscription_fee_per_month_vnd": 2900000,
+        "max_range_km": 431,
+        "seats": 5,
+        "key_features": [
+          "Dẫn động 2 cầu (AWD)",
+          "Tăng tốc 0-100km/h trong 5.8s",
+          "Thiết kế phi thuyền tương lai"
+        ]
+      }
+    }
+  },
+  "VF8_Plus": {
+    "model_name": "VinFast VF 8 Plus",
+    "versions": {
+      "plus": {
+        "price_without_battery_vnd": 1170000000,
+        "price_with_battery_vnd": 1410000000,
+        "battery_subscription_fee_per_month_vnd": 3100000,
+        "max_range_km": 400,
+        "seats": 5,
+        "key_features": [
+          "Ghế da cao cấp có sưởi/thông gió",
+          "Loa cao cấp",
+          "Cửa sổ trời chỉnh điện"
+        ]
+      }
+    }
+  },
+  "VF9_Eco": {
+    "model_name": "VinFast VF 9 Eco",
+    "versions": {
+      "eco": {
+        "price_without_battery_vnd": 1491000000,
+        "price_with_battery_vnd": 1984000000,
+        "battery_subscription_fee_per_month_vnd": 6400000,
+        "max_range_km": 594,
+        "seats": 7,
+        "key_features": [
+          "SUV cỡ E hạng sang",
+          "Không gian cực kỳ rộng rãi",
+          "Quãng đường di chuyển ấn tượng"
+        ]
+      }
+    }
+  },
+  "VF9_Plus_7Seats": {
+    "model_name": "VinFast VF 9 Plus (7 chỗ)",
+    "versions": {
+      "plus": {
+        "price_without_battery_vnd": 1676000000,
+        "price_with_battery_vnd": 2169000000,
+        "battery_subscription_fee_per_month_vnd": 6400000,
+        "max_range_km": 580,
+        "seats": 7,
+        "key_features": [
+          "Đèn LED Matrix",
+          "Màn hình giải trí 15.6 inch",
+          "Hệ thống giảm xóc khí nén"
+        ]
+      }
+    }
+  },
+  "VF9_Plus_Captain": {
+    "model_name": "VinFast VF 9 Plus (6 chỗ)",
+    "versions": {
+      "plus_captain": {
+        "price_without_battery_vnd": 1708000000,
+        "price_with_battery_vnd": 2201000000,
+        "battery_subscription_fee_per_month_vnd": 6400000,
+        "max_range_km": 580,
+        "seats": 6,
+        "key_features": [
+          "Ghế cơ trưởng (Captain Seat)",
+          "Massage và làm mát hàng ghế sau",
+          "Tiện nghi chuẩn thương gia"
+        ]
+      }
+    }
+  },
+  "VF_Wild": {
+    "model_name": "VinFast VF Wild (Concept)",
+    "versions": {
+      "prototype": {
+        "price_without_battery_vnd": 0,
+        "price_with_battery_vnd": 0,
+        "battery_subscription_fee_per_month_vnd": 0,
+        "max_range_km": 450,
+        "seats": 5,
+        "key_features": [
+          "Xe bán tải điện thông minh",
+          "Cửa mở ngược độc đáo",
+          "Thiết kế hầm hố, hiện đại"
         ]
       }
     }
