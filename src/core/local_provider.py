@@ -11,10 +11,10 @@ class LocalProvider(LLMProvider):
     """Returns a `ChatOllama` configured for a local Ollama model."""
 
     def __init__(
-        self,
-        model: str = "qwen2.5",
-        temperature: float = 0,
-        base_url: str = "http://localhost:11434",
+            self,
+            model: str = "qwen2.5",
+            temperature: float = 0,
+            base_url: str = "http://localhost:11434",
     ) -> None:
         self._model = model
         self._temperature = temperature
