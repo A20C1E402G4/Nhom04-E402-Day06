@@ -13,6 +13,7 @@ dependencies = [
     "streamlit>=1.36.0",
     "pandas>=2.2.0",
     "python-dotenv>=1.0.0",
+    "langchain-ollama>=1.1.0",
 ]
 
 [project.optional-dependencies]
