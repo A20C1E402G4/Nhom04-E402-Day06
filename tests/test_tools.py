@@ -4,8 +4,13 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from vssa_agent.schemas import CalculateLoanArgs, GetVehicleDataArgs
+from vssa_agent.schemas import (
+    BookTestDriveArgs,
+    CalculateLoanArgs,
+    GetVehicleDataArgs,
+)
 from vssa_agent.tools import (
+    _book_test_drive_impl,
     _calculate_loan_impl,
     _find_showrooms_impl,
     calculate_loan,
@@ -126,3 +131,60 @@ def test_get_promotion_returns_vf7_offer() -> None:
     out = get_promotion.invoke({"model_id": "VF7"})
     promo_codes = [p["promo_code"] for p in out["promotions"]]
     assert "VF7_FREE_CHARGE_1YR" in promo_codes
+
+
+# ---------- book_test_drive -------------------------------------------------
+
+
+def test_book_test_drive_schema_rejects_short_phone() -> None:
+    with pytest.raises(ValidationError):
+        BookTestDriveArgs(
+            name="Khách Demo",
+            phone="123",
+            model_id="VF7",
+            showroom_id="SR_Q9",
+            slot="2026-04-10T09:00:00",
+        )
+
+
+def test_book_test_drive_impl_rejects_unknown_showroom() -> None:
+    result = _book_test_drive_impl(
+        name="Khách Demo",
+        phone="0901234567",
+        model_id="VF7",
+        showroom_id="SR_NOPE",
+        slot="2026-04-10T09:00:00",
+    )
+    assert result["booked"] is False
+    assert "không tồn tại" in result["error"]
+
+
+def test_book_test_drive_impl_rejects_invalid_slot() -> None:
+    result = _book_test_drive_impl(
+        name="Khách Demo",
+        phone="0901234567",
+        model_id="VF7",
+        showroom_id="SR_Q9",
+        slot="1999-01-01T00:00:00",
+    )
+    assert result["booked"] is False
+    assert "không có trong khung giờ" in result["error"]
+
+
+def test_book_test_drive_impl_happy_path(tmp_path, monkeypatch) -> None:
+    # Redirect telemetry writes into an isolated tmp log dir.
+    from vssa_agent import config as cfg_mod
+
+    monkeypatch.setattr(cfg_mod, "LOGS_DIR", tmp_path)
+    result = _book_test_drive_impl(
+        name="Khách Demo",
+        phone="0901234567",
+        model_id="VF7",
+        showroom_id="SR_Q9",
+        slot="2026-04-10T09:00:00",
+    )
+    assert result["booked"] is True
+    assert result["confirmation"]["showroom_name"] == "VinFast Thảo Điền"
+    bookings_file = tmp_path / "bookings.jsonl"
+    assert bookings_file.exists()
+    assert "Khách Demo" in bookings_file.read_text(encoding="utf-8")
