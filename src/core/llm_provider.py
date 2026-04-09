@@ -7,8 +7,12 @@ from langchain_core.language_models import BaseChatModel
 
 
 class LLMProvider(ABC):
-    """Common interface so we can swap GPT-4o ↔ Gemini ↔ local models."""
+    """
+    Abstract Base Class for LLM Providers.
+    Supports OpenAI, Gemini, and Local models.
+    """
 
     @abstractmethod
     def chat_model(self) -> BaseChatModel:
-        """Return a LangChain chat model ready to be `bind_tools`-ed."""
+        """Return a LangChain chat model instance ready for use."""
+        ...

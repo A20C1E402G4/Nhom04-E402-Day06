@@ -2,35 +2,170 @@
   "tco_constants": {
     "current_electricity_price_vnd_per_kwh": 3858,
     "average_gas_price_vnd_per_liter": 24000,
-    "co2_emission_reduction_kg_per_km": 0.15
+    "co2_emission_reduction_kg_per_km": 0.15,
+    "maintenance_cost_reduction_percent": 30
   },
   "charging_stations": {
-    "ST_VT01": {
-      "location_name": "Trạm dừng chân cao tốc Long Thành",
-      "address": "Cao tốc TPHCM - Long Thành - Dầu Giây",
-      "coordinates": {"lat": 10.7412, "lng": 107.0112},
-      "charger_types": ["DC 60kW", "DC 250kW"],
+    "ST_HN01": {
+      "location_name": "Vinhomes Ocean Park 1",
+      "address": "Gia Lâm, Hà Nội",
+      "coordinates": {
+        "lat": 20.9941,
+        "lng": 105.9458
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW",
+        "DC 150kW",
+        "DC 250kW"
+      ],
       "status": "operational"
     },
-    "ST_VT02": {
-      "location_name": "Vincom Plaza Vũng Tàu",
-      "address": "Phường 7, TP Vũng Tàu",
-      "coordinates": {"lat": 10.3541, "lng": 107.0858},
-      "charger_types": ["AC 11kW", "DC 60kW"],
+    "ST_HN02": {
+      "location_name": "Vincom Mega Mall Smart City",
+      "address": "Nam Từ Liêm, Hà Nội",
+      "coordinates": {
+        "lat": 21.0035,
+        "lng": 105.7422
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW",
+        "DC 250kW"
+      ],
       "status": "operational"
     },
-    "ST_HCM01": {
-      "location_name": "Khu công nghệ cao Quận 9",
-      "address": "Phường Tân Phú, TP Thủ Đức (Quận 9)",
-      "coordinates": {"lat": 10.8461, "lng": 106.7930},
-      "charger_types": ["AC 11kW", "DC 250kW"],
+    "ST_HN03": {
+      "location_name": "Vincom Center Bà Triệu",
+      "address": "191 Bà Triệu, Hai Bà Trưng, Hà Nội",
+      "coordinates": {
+        "lat": 21.0112,
+        "lng": 105.8491
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW"
+      ],
       "status": "operational"
     },
-    "ST_HCM02": {
-      "location_name": "Vincom Center Đồng Khởi",
-      "address": "72 Lê Thánh Tôn, Quận 1",
-      "coordinates": {"lat": 10.7779, "lng": 106.7020},
-      "charger_types": ["AC 11kW"],
+    "ST_HN04": {
+      "location_name": "Trạm dừng nghỉ Cao tốc Pháp Vân - Cầu Giẽ",
+      "address": "Km 188, Thường Tín, Hà Nội",
+      "coordinates": {
+        "lat": 20.8521,
+        "lng": 105.8823
+      },
+      "charger_types": [
+        "DC 60kW",
+        "DC 150kW",
+        "DC 250kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HN05": {
+      "location_name": "Vinhomes Riverside",
+      "address": "Phúc Lợi, Long Biên, Hà Nội",
+      "coordinates": {
+        "lat": 21.0456,
+        "lng": 105.9034
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HN06": {
+      "location_name": "Vincom Center Nguyễn Chí Thanh",
+      "address": "54A Nguyễn Chí Thanh, Láng Thượng, Đống Đa, Hà Nội",
+      "coordinates": {
+        "lat": 21.0238,
+        "lng": 105.8105
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HN07": {
+      "location_name": "Bãi đỗ xe công cộng Trần Quang Khải",
+      "address": "Trần Quang Khải, Hoàn Kiếm, Hà Nội",
+      "coordinates": {
+        "lat": 21.0285,
+        "lng": 105.8567
+      },
+      "charger_types": [
+        "DC 60kW",
+        "DC 150kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HN08": {
+      "location_name": "Vincom Plaza Long Biên",
+      "address": "Khu đô thị Vinhomes Riverside, Long Biên, Hà Nội",
+      "coordinates": {
+        "lat": 21.0432,
+        "lng": 105.9123
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HN09": {
+      "location_name": "Trung tâm Hội nghị Quốc gia",
+      "address": "Cổng số 1, Đại lộ Thăng Long, Mễ Trì, Hà Nội",
+      "coordinates": {
+        "lat": 21.0067,
+        "lng": 105.7878
+      },
+      "charger_types": [
+        "DC 60kW",
+        "DC 250kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HN10": {
+      "location_name": "Tòa nhà Technopark Tower",
+      "address": "Khu đô thị Vinhomes Ocean Park, Gia Lâm, Hà Nội",
+      "coordinates": {
+        "lat": 20.9912,
+        "lng": 105.9422
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW",
+        "DC 150kW"
+      ],
+      "status": "operational"
+    },
+    "ST_QN01": {
+      "location_name": "Vincom Plaza Hạ Long",
+      "address": "Khu cột Đồng Hồ, Bạch Đằng, Hạ Long, Quảng Ninh",
+      "coordinates": {
+        "lat": 20.9507,
+        "lng": 107.0735
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW"
+      ],
+      "status": "operational"
+    },
+    "ST_HP01": {
+      "location_name": "Nhà máy VinFast Hải Phòng",
+      "address": "Đảo Cát Hải, Hải Phòng",
+      "coordinates": {
+        "lat": 20.7963,
+        "lng": 106.9152
+      },
+      "charger_types": [
+        "AC 11kW",
+        "DC 60kW",
+        "DC 250kW"
+      ],
       "status": "operational"
     }
   }
