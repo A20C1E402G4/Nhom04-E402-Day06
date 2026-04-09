@@ -77,12 +77,23 @@ st.markdown("""
         padding: 2px 10px !important;
         border-radius: 8px !important;
         height: auto !important;
-        white-space: nowrap !important; /* Ngăn nhảy dòng chữ */
+        white-space: nowrap !important;
     }
     .stButton button[kind="secondary"]:hover {
         opacity: 1;
         border-color: #0088cc !important;
         color: #0088cc !important;
+    }
+    
+    /* Cải thiện hiệu ứng nổi/chìm cho cụm phản hồi */
+    .stButton button[kind="primary"] {
+        opacity: 1.0 !important;
+    }
+    .stButton button[kind="secondary"] {
+        opacity: 0.6 !important;
+    }
+    .stButton button[kind="secondary"]:hover {
+        opacity: 1 !important;
     }
 
     /* Suggestions Styling */
@@ -111,9 +122,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 DEFAULT_QUERY = "Tôi có 800 triệu, nhà 4 người, ở chung cư, nên mua xe nào?"
-OTHER_QUERY = "Các dòng xe SUV của VinFast có gì nổi bật?"
 JSON_BLOCK_RE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
-LOAN_KEYWORDS = ("trả góp", "vay", "tài chính", "lãi suất", "trả trước", "góp", "khoản vay")
+SKELETON_MD = "_⏳ VSSA đang soạn câu trả lời..._"
 TERM_OPTIONS = [24, 36, 48, 60, 72, 84, 96]
 
 # ---------------------------------------------------------------------------
@@ -187,6 +197,7 @@ def init_session_state() -> None:
     st.session_state.setdefault("loan_term", 96)
     st.session_state.setdefault("is_processing", False)
     st.session_state.setdefault("pending_input", None)
+    st.session_state.setdefault("feedback_map", {})
 
 # ---------------------------------------------------------------------------
 # UI Components
@@ -217,7 +228,7 @@ def render_sidebar() -> None:
 
         if st.button("🗑️ Làm mới hội thoại", use_container_width=True):
             new_id = str(uuid.uuid4()); st.query_params["thread_id"] = new_id
-            for key in ("session_id", "user_context", "chat_history", "last_vehicle", "loan_term", "is_processing", "pending_input"):
+            for key in ("session_id", "user_context", "chat_history", "last_vehicle", "loan_term", "is_processing", "pending_input", "feedback_map"):
                 st.session_state.pop(key, None)
             st.rerun()
 
@@ -265,15 +276,23 @@ def main() -> None:
                 
                 # Feedback buttons for assistant
                 if entry["role"] == "assistant":
+                    f_state = st.session_state.feedback_map.get(idx)
+                    
                     c1, c2, c3, _ = st.columns([0.17, 0.23, 0.15, 0.45])
                     with c1:
-                        if st.button("👍 Hữu ích", key=f"like_{idx}"):
+                        btn_type = "primary" if f_state == "like" else "secondary"
+                        if st.button("👍 Hữu ích", key=f"like_{idx}", type=btn_type):
+                            st.session_state.feedback_map[idx] = "like"
                             log_feedback("Helpful", entry["content"])
-                            st.toast("Cảm ơn bạn đã phản hồi!")
+                            st.toast("Đã ghi nhận phản hồi 'Hữu ích'!")
+                            st.rerun()
                     with c2:
-                        if st.button("👎 Không hữu ích", key=f"dislike_{idx}"):
+                        btn_type = "primary" if f_state == "dislike" else "secondary"
+                        if st.button("👎 Không hữu ích", key=f"dislike_{idx}", type=btn_type):
+                            st.session_state.feedback_map[idx] = "dislike"
                             log_feedback("Not Helpful", entry["content"])
-                            st.toast("Chúng mình sẽ cải thiện hơn!")
+                            st.toast("Đã ghi nhận phản hồi 'Không hữu ích'!")
+                            st.rerun()
                     with c3:
                         if st.button("📞 CSKH", key=f"cskh_{idx}", help="Liên hệ hỗ trợ"):
                             st.toast("Đang kết nối với tổng đài VinFast...")
