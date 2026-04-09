@@ -21,7 +21,7 @@ class GetVehicleDataArgs(BaseModel):
 
     model_id: VehicleModelId = Field(
         ...,
-        description="VinFast model identifier. Must be one of VF5, VF7, VF8.",
+        description="VinFast model identifier (e.g., VF3, VF5, VF7, VF8, VF9, VF_Wild).",
     )
 
 

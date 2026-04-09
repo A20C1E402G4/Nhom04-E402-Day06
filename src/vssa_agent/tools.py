@@ -277,13 +277,13 @@ def find_charging_stations(query: str = "") -> dict[str, Any]:
     return {
         "found": True,
         "stations": matches,
-        "disclaimer": "Lưu ý: Bn `` nA'i v>i khAch r_ng mAnh ch% l y thA'ng tin t dA liu cA3 s_n."
+        "disclaimer": DISCLAIMER_VI
     }
 
 
 @tool("get_all_vehicles", args_schema=GetAllVehiclesArgs)
 def get_all_vehicles() -> dict[str, Any]:
-    """Lấy danh sách đầy đủ tất cả các dòng xe VinFast và thông số chi tiết."""
+    """Get a complete list of all VinFast vehicle models and their detailed specifications."""
     return load_vehicles()
 
 

@@ -37,8 +37,14 @@ def ensure_logs_dir() -> Path:
 def load_json(filename: str) -> dict[str, Any]:
     """Load a JSON file from the data directory (cached)."""
     path = DATA_DIR / filename
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    if not path.exists():
+        # Fallback for missing files to prevent crashing the agent
+        return {}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {}
 
 
 def load_vehicles() -> dict[str, Any]:

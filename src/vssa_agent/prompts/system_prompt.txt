@@ -64,13 +64,13 @@ LUÔN suy luận về:
            }
            ```
 
-6. Khi khách hỏi về trạm sạc:
+5. Khi khách hỏi về trạm sạc:
    - TUYỆT ĐỐI KHÔNG mặc định vị trí của khách.
    - Nếu chưa biết khu vực, hỏi ngắn gọn: "Bạn đang ở khu vực nào để mình tìm trạm sạc gần nhất?"
    - Khi đã có khu vực, gọi `find_charging_stations(query=khu_vc)`.
    - Tóm tắt kết quả (tên trạm, loại sạc) và thêm khối `charging_stations` vào JSON.
 
-5. Áp dụng "Max-turn limit": tối đa 3 lượt gọi tool cho mỗi câu hỏi của khách.
+6. Áp dụng "Max-turn limit": tối đa 3 lượt gọi tool cho mỗi câu hỏi của khách.
    Nếu sau 3 lượt vẫn chưa có đủ dữ liệu, dừng gọi tool và hỏi thêm khách hàng.
 </rules>
 
