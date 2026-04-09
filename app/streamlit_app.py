@@ -38,6 +38,7 @@ import streamlit as st  # noqa: E402
 from langchain_core.messages import AIMessage, HumanMessage  # noqa: E402
 from langgraph.checkpoint.sqlite import SqliteSaver  # noqa: E402
 
+from core.local_provider import LocalProvider  # noqa: E402
 from core.openai_provider import OpenAIProvider  # noqa: E402
 from telemetry import logger as telemetry_logger  # noqa: E402
 from telemetry import metrics as telemetry_metrics  # noqa: E402
@@ -111,12 +112,29 @@ def user_mentioned_loan(text: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+# Available models — Local Qwen 2.5 first (default)
+MODEL_OPTIONS: dict[str, dict] = {
+    "🏠 Local — Qwen 2.5 (Ollama)": {"provider": "local", "model": "qwen2.5:7b"},
+    "🏠 Local — Qwen 2.5 14B (Ollama)": {"provider": "local", "model": "qwen2.5:14b"},
+    "🏠 Local — Llama 3 8B (Ollama)": {"provider": "local", "model": "llama3:8b"},
+    "☁️ OpenAI — GPT-4o": {"provider": "openai", "model": None},
+}
+
+
+def _make_provider(label: str):
+    cfg = MODEL_OPTIONS[label]
+    if cfg["provider"] == "local":
+        return LocalProvider(model=cfg["model"])
+    return OpenAIProvider()
+
+
 @st.cache_resource(show_spinner=False)
-def get_compiled_graph():
-    """Build the agent graph once with a SqliteSaver shared across reruns."""
+def get_compiled_graph(_model_label: str):
+    """Build the agent graph once per model selection."""
     conn = sqlite3.connect(str(CHECKPOINT_DB_PATH), check_same_thread=False)
     saver = SqliteSaver(conn)
-    return build_graph(OpenAIProvider().chat_model(), checkpointer=saver)
+    provider = _make_provider(_model_label)
+    return build_graph(provider.chat_model(), checkpointer=saver)
 
 
 def get_or_create_thread_id() -> str:
@@ -135,7 +153,8 @@ def get_or_create_thread_id() -> str:
 
 def load_persisted_user_context(thread_id: str) -> dict[str, Any]:
     try:
-        app = get_compiled_graph()
+        label = st.session_state.get("model_label", list(MODEL_OPTIONS.keys())[0])
+        app = get_compiled_graph(label)
         snapshot = app.get_state({"configurable": {"thread_id": thread_id}})
         return dict((snapshot.values or {}).get("user_context") or {})
     except Exception:  # noqa: BLE001
@@ -160,7 +179,8 @@ def init_session_state() -> None:
 
 
 def invoke_agent(user_text: str) -> str:
-    app = get_compiled_graph()
+    label = st.session_state.get("model_label", list(MODEL_OPTIONS.keys())[0])
+    app = get_compiled_graph(label)
     config = {"configurable": {"thread_id": st.session_state.session_id}}
     state_input = {
         "messages": [HumanMessage(content=user_text)],
@@ -179,6 +199,22 @@ def invoke_agent(user_text: str) -> str:
 
 def render_sidebar() -> None:
     with st.sidebar:
+        # ── Model selector ──
+        st.header("⚙️ Chọn mô hình AI")
+        model_labels = list(MODEL_OPTIONS.keys())
+        current = st.session_state.get("model_label", model_labels[0])
+        try:
+            idx = model_labels.index(current)
+        except ValueError:
+            idx = 0
+        chosen = st.selectbox(
+            "Model", model_labels, index=idx, key="_model_selector"
+        )
+        if chosen != st.session_state.get("model_label"):
+            st.session_state.model_label = chosen
+            st.rerun()
+
+        st.divider()
         st.header("🧠 Trí nhớ AI")
         st.caption("Sở thích AI đã học từ các lượt sửa lưng của bạn.")
 
