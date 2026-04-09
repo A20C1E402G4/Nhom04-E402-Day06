@@ -1,88 +1,73 @@
 # VinFast Smart Sales Agent (VSSA) 🚗⚡
 
-VSSA là trợ lý bán hàng AI thế hệ mới, được tối ưu hóa riêng cho hệ sinh thái xe điện VinFast. Sử dụng kiến trúc **LangGraph (Stateful Agentic Workflow)**, VSSA không chỉ trả lời câu hỏi mà còn chủ động dẫn dắt khách hàng từ khâu chọn xe, lập phương án tài chính đến chốt lịch lái thử trong 1 phút.
+VSSA là giải pháp AI Agent cao cấp hỗ trợ bán hàng và tư vấn xe điện VinFast. Dự án sử dụng **LangGraph** để xây dựng luồng tư vấn có trạng thái (stateful), kết hợp hệ thống **Telemetry** thời gian thực để tối ưu quy trình chuyển đổi khách hàng (Lead Generation).
 
 ---
 
-## 🌟 Tính năng đột phá
+## 🌟 Tính năng cốt lõi
 
-*   **Tư vấn cá nhân hóa (Personal Sales Expert):** Đề xuất dòng xe (VF 3, VF 5, VF 7,...) dựa trên ngân sách, thói quen di chuyển và số lượng thành viên gia đình.
-*   **Chuyên gia tài chính (Smart Finance Planner):** Tự động tính toán tiền trả trước, gốc + lãi hàng tháng theo từng gói vay (80%, 24 tháng, 8 năm) và chính sách thuê pin/mua pin.
-*   **Tối ưu lịch lái thử (Test Drive Optimizer):** Tìm kiếm showroom gần nhất qua Google Maps API, kiểm tra tình trạng xe demo và xác nhận lịch hẹn tức thì.
-*   **Mạng lưới trạm sạc (Power Station Hub):** Tra cứu nhanh trạm sạc AC/DC quanh khu vực khách sống để giải quyết triệt để nỗi lo về hạ tầng.
-*   **Giao diện tương tác Live (Reactive UI):** Tự động cập nhật số liệu tư vấn khi người dùng điều chỉnh thông số trên thanh kéo (Slider) hoặc nút chọn.
-
----
-
-## 🛠 Công nghệ sử dụng
-
-| Thành phần | Công nghệ |
-| :--- | :--- |
-| **Logic Core** | LangGraph (Stateful Multi-turn Agent) |
-| **Mô hình ngôn ngữ** | GPT-4o / Gemini 1.5 Flash / Qwen 2.5 (Local) |
-| **Giao diện** | Streamlit (Python-based Web App) |
-| **Lưu trữ** | SQLite (Conversation Memory) & JSON (Product Data) |
-| **Theo dõi** | Lead Generation Telemetry & JSONL Logging |
+*   **Tư vấn cá nhân hóa:** Phân tích nhu cầu để đề xuất trong 11 mẫu xe VinFast từ database (`vehicles.json`).
+*   **Lập kế hoạch tài chính:** Tích hợp 2 ngân hàng đối tác và 2 chương trình ưu đãi (`finance.json`), tính toán lãi suất và gốc hàng tháng chính xác.
+*   **Tự động hóa lịch lái thử:** Tra cứu 11 showroom tại Hà Nội & TP.HCM, xác nhận lịch hẹn và lưu vết booking.
+*   **Tìm kiếm trạm sạc:** Định vị 12 trạm sạc trọng điểm tại các khu vực HN, QN, HP, HCM, VT.
+*   **Hỗ trợ đa mô hình:** Chạy linh hoạt trên GPT-4o, Gemini hoặc Local LLM (Qwen 2.5 qua Ollama).
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & Thực thi
+## 🛠 Kiến trúc hệ thống
 
-### 1. Chuẩn bị môi trường
-Yêu cầu Python 3.10+. Khuyến khích dùng `venv`.
+```text
+vssa/
+├── app/
+│   └── streamlit_app.py        # UI trung tâm, quản lý tương tác người dùng
+├── data/                       # CSDL Mock: Xe, Showroom, Tài chính, Trạm sạc
+├── src/
+│   ├── core/                   # LLM Provider abstraction (OpenAI, Gemini, Local)
+│   ├── telemetry/              # Logging JSONL & phân tích chỉ số chuyển đổi
+│   └── vssa_agent/             # Brain: LangGraph, Tools (7 tools), Pydantic Schemas
+├── tests/                      # 17 unit tests cho Tools & Integration tests cho Graph
+├── logs/                       # Nhật ký Agent, Bookings, Corrections, Failed Intents
+└── vssa_state.sqlite           # Bộ nhớ dài hạn (Cross-session memory)
+```
 
+---
+
+## 🚀 Cài đặt & Sử dụng
+
+### 1. Khởi tạo môi trường
 ```bash
-# Clone dự án
-git clone <repository_url>
-cd Nhom04-E402-Day06
-
-# Tạo và kích hoạt môi trường ảo
+# Tạo môi trường ảo
 python -m venv .venv
-# Windows:
-.\.venv\Scripts\activate
-# Linux/Mac:
-source .venv/bin/activate
+.\.venv\Scripts\activate  # Windows
 
-# Cài đặt thư viện
+# Cài đặt thư viện (LangGraph, Streamlit, Pydantic, etc.)
 pip install -r requirements.txt
 ```
 
-### 2. Cấu hình API Key
-Tạo file `.env` tại thư mục gốc từ mẫu `.env.example`:
-
+### 2. Cấu hình
+Tạo file `.env` tại thư mục gốc:
 ```env
-OPENAI_API_KEY=your_openai_key_here
-GEMINI_API_KEY=your_gemini_key_here
-LLM_PROVIDER=gemini  # Tùy chọn: openai, gemini, hoặc local
+OPENAI_API_KEY=your_key
+GEMINI_API_KEY=your_key
+LLM_PROVIDER=openai  # Hoặc 'gemini', 'local'
 ```
 
-### 3. Chạy ứng dụng
+### 3. Thực thi
 ```bash
 streamlit run app/streamlit_app.py
 ```
 
 ---
 
-## 📂 Kiến trúc dự án
+## 📊 Telemetry & Chất lượng dịch vụ
 
-```text
-├── app/                  # Streamlit UI & Event Handlers
-├── data/                 # Catalog: Vehicles, Showrooms, Charging Stations
-├── src/vssa_agent/       # Brain of the system
-│   ├── graph.py          # LangGraph State Machine
-│   ├── tools.py          # Function Calling (Finance, Bookings, Search)
-│   └── prompts/          # System Prompts & Sales Persona
-├── telemetry/            # Logs for Lead Gen & Conversation Analysis
-└── tests/                # System Evaluation & Unit Tests
-```
+Hệ thống lưu trữ nhật ký tại thư mục `logs/` để phục vụ Data Flywheel:
+*   `agent.jsonl`: Theo dõi độ trễ và token usage.
+*   `bookings.jsonl`: Ghi nhận tỷ lệ chốt lịch lái thử thành công.
+*   `corrections.jsonl`: Theo dõi hành vi sửa đổi tham số tài chính của khách hàng.
+*   `failed_intents.jsonl`: Thu thập các yêu cầu chưa được đáp ứng để mở rộng API.
+
+**Cơ chế Checkpoint:** Sử dụng SQLite để duy trì ngữ cảnh hội thoại ngay cả khi người dùng tải lại trang, đảm bảo trải nghiệm tư vấn liền mạch.
 
 ---
-
-## 🛡 Chiến lược an toàn & Chính xác
-
-1.  **Strict Accuracy:** Ưu tiên 100% chính xác về thông số giá và khuyến mãi thông qua việc truy vấn trực tiếp DB nội bộ.
-2.  **Smart Fallback:** Tự động phát hiện ý định ngoài phạm vi và gợi ý kết nối với nhân viên tư vấn thật.
-3.  **No Hallucinations:** Ràng buộc kết quả đầu ra bằng logic validation trước khi hiển thị cho người dùng.
-
----
-**Nhóm:** VinSales AI-Powered | **Sản phẩm tham dự AI Product Hackathon**
+**Nhóm:** VinSales AI-Powered | **AI Product Hackathon Project**
