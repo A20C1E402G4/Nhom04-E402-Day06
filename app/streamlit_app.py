@@ -1,21 +1,24 @@
-"""Streamlit demo for VSSA Case 1.
+"""Streamlit demo for VSSA Case 1 — single-column, inline-action chat UI.
 
 Run with::
 
     streamlit run app/streamlit_app.py
 
-Implements `flow/case_1.md`:
-
-* Happy Path  — chat → LangGraph agent → minimal VF 7 card.
-* Loan path   — only revealed when the user asks (or clicks "Xem trả góp"),
-                with a slider that recomputes locally (no LLM round-trip).
-* Booking     — 3-step form (details → confirm → save) writing to
-                ``logs/bookings.jsonl``.
-* Flywheel    — slider corrections + booking leads + failed intents are logged,
-                and the LLM receives a `<user_profile>` SystemMessage on every
-                turn so it can apply learned preferences. State persists across
-                browser reloads via SqliteSaver keyed by a thread_id stored in
-                ``st.query_params``.
+Design highlights
+-----------------
+* **One column** — the chat *is* the UI. Vehicle cards, the loan toggle, and
+  the booking CTA all render inline inside the latest assistant
+  `st.chat_message`.
+* **Loan slider with explicit confirm** — dragging only previews the numbers.
+  A correction is logged to ``logs/corrections.jsonl`` (and written back into
+  ``user_context``) only when the user clicks **✅ Xác nhận thay đổi**.
+* **Agent-driven booking** — clicking **📅 Đặt lịch lái thử** injects a
+  user message into the chat. The LLM then walks the customer through
+  location → showroom suggestion → name/phone → `book_test_drive`. No
+  rule-based form.
+* **Flywheel** — SqliteSaver persists AgentState across reloads;
+  ``user_context`` is injected back into the LLM as a ``<user_profile>``
+  SystemMessage on every turn.
 """
 from __future__ import annotations
 
@@ -43,9 +46,9 @@ from telemetry import logger as telemetry_logger  # noqa: E402
 from telemetry import metrics as telemetry_metrics  # noqa: E402
 from vssa_agent.config import CHECKPOINT_DB_PATH, LOGS_DIR  # noqa: E402
 from vssa_agent.graph import build_graph  # noqa: E402
-from vssa_agent.tools import _calculate_loan_impl, _find_showrooms_impl  # noqa: E402
+from vssa_agent.tools import _calculate_loan_impl  # noqa: E402
 
-st.set_page_config(page_title="VSSA — VinFast Smart Sales Agent", layout="wide")
+st.set_page_config(page_title="VSSA — VinFast Smart Sales Agent", layout="centered")
 
 DEFAULT_QUERY = "Tôi có 800 triệu, nhà 4 người, ở chung cư, nên mua xe nào?"
 JSON_BLOCK_RE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
@@ -59,10 +62,11 @@ LOAN_KEYWORDS = (
     "khoản vay",
 )
 SKELETON_MD = "_⏳ VSSA đang soạn câu trả lời..._"
+TERM_OPTIONS = [24, 36, 48, 60, 72, 84, 96]
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Pure helpers
 # ---------------------------------------------------------------------------
 
 
@@ -113,19 +117,12 @@ def user_mentioned_loan(text: str) -> bool:
 
 @st.cache_resource(show_spinner=False)
 def get_compiled_graph():
-    """Build the agent graph once with a SqliteSaver shared across reruns."""
     conn = sqlite3.connect(str(CHECKPOINT_DB_PATH), check_same_thread=False)
     saver = SqliteSaver(conn)
     return build_graph(OpenAIProvider().chat_model(), checkpointer=saver)
 
 
 def get_or_create_thread_id() -> str:
-    """Stable per-browser session id stored in URL query params.
-
-    This is what makes cross-session memory work: refreshing the page keeps the
-    same `thread_id`, so SqliteSaver returns the prior AgentState (including
-    learned `user_context`).
-    """
     if "thread_id" in st.query_params:
         return st.query_params["thread_id"]
     tid = str(uuid.uuid4())
@@ -148,15 +145,12 @@ def init_session_state() -> None:
         telemetry_metrics.incr_session()
         seeded = load_persisted_user_context(st.session_state.session_id)
         st.session_state.user_context = seeded or {"loan_preference_pct": 70}
+    # chat_history entries: {"role", "content", "payload": dict|None}
     st.session_state.setdefault("chat_history", [])
-    st.session_state.setdefault("last_payload", None)
+    st.session_state.setdefault("last_vehicle", None)
     st.session_state.setdefault("show_loan", False)
-    st.session_state.setdefault(
-        "loan_pct", int(st.session_state.user_context.get("loan_preference_pct", 70))
-    )
     st.session_state.setdefault("loan_term", 96)
-    st.session_state.setdefault("booking_step", "idle")
-    st.session_state.setdefault("booking_draft", None)
+    st.session_state.setdefault("pending_user_input", None)
 
 
 def invoke_agent(user_text: str) -> str:
@@ -205,247 +199,201 @@ def render_sidebar() -> None:
         if st.button("🗑️ Xoá trí nhớ phiên này"):
             new_id = str(uuid.uuid4())
             st.query_params["thread_id"] = new_id
+            for key in list(st.session_state.keys()):
+                if key.startswith(("loan_pct_", "loan_term_")):
+                    st.session_state.pop(key, None)
             for key in (
                 "session_id",
                 "user_context",
                 "chat_history",
-                "last_payload",
+                "last_vehicle",
                 "show_loan",
-                "loan_pct",
                 "loan_term",
-                "booking_step",
-                "booking_draft",
+                "pending_user_input",
             ):
                 st.session_state.pop(key, None)
             st.rerun()
 
 
 # ---------------------------------------------------------------------------
-# Right column — vehicle / loan / booking
+# Inline action widgets rendered inside assistant chat_message
 # ---------------------------------------------------------------------------
 
 
-def render_vehicle_card(vehicle: dict[str, Any]) -> None:
-    st.subheader(f"🚗 {vehicle.get('model_name', '—')}")
+def render_vehicle_summary(vehicle: dict[str, Any]) -> None:
     st.markdown(
-        f"**Giá từ:** {fmt_vnd(vehicle.get('price_without_battery_vnd'))}  \n"
-        f"**Quãng đường:** {vehicle.get('max_range_km', '—')} km / lần sạc"
+        f"**🚗 {vehicle.get('model_name', '—')}**  \n"
+        f"Giá từ: **{fmt_vnd(vehicle.get('price_without_battery_vnd'))}** · "
+        f"Quãng đường: **{vehicle.get('max_range_km', '—')} km**"
     )
     features = vehicle.get("key_features") or []
     if features:
         st.markdown("\n".join(f"- {f}" for f in features[:4]))
 
 
-def render_loan_section(vehicle: dict[str, Any]) -> None:
-    if not st.session_state.show_loan:
-        if st.button("💰 Xem phương án trả góp"):
-            st.session_state.show_loan = True
-            st.rerun()
+def render_loan_inline(vehicle: dict[str, Any], turn_key: str) -> None:
+    """Loan expander with draft slider + explicit confirm button."""
+    price = int(vehicle.get("price_without_battery_vnd") or 0)
+    if price <= 0:
         return
 
-    vehicle_price = int(vehicle.get("price_without_battery_vnd") or 0)
-    if vehicle_price <= 0:
-        return
+    committed_pct = int(st.session_state.user_context.get("loan_preference_pct", 70))
+    slider_key = f"loan_pct_{turn_key}"
+    term_key = f"loan_term_{turn_key}"
 
-    with st.expander("Phương án trả góp", expanded=True):
-        prev_pct = int(st.session_state.loan_pct)
+    if slider_key not in st.session_state:
+        st.session_state[slider_key] = committed_pct
+    if term_key not in st.session_state:
+        st.session_state[term_key] = int(st.session_state.loan_term)
+
+    with st.expander("💰 Phương án trả góp (nháp — chưa lưu)", expanded=True):
         cols = st.columns(2)
         with cols[0]:
-            new_pct = st.slider(
-                "Tỷ lệ vay (%)", 0, 80, prev_pct, step=5, key="loan_pct_slider"
+            draft_pct = st.slider(
+                "Tỷ lệ vay (%)", 0, 80, step=5, key=slider_key
             )
         with cols[1]:
-            term_options = [24, 36, 48, 60, 72, 84, 96]
             try:
-                term_idx = term_options.index(int(st.session_state.loan_term))
+                term_idx = TERM_OPTIONS.index(int(st.session_state[term_key]))
             except ValueError:
-                term_idx = len(term_options) - 1
-            new_term = st.selectbox(
-                "Kỳ hạn (tháng)", term_options, index=term_idx, key="loan_term_select"
+                term_idx = len(TERM_OPTIONS) - 1
+            draft_term = st.selectbox(
+                "Kỳ hạn (tháng)",
+                TERM_OPTIONS,
+                index=term_idx,
+                key=term_key,
             )
 
         result = _calculate_loan_impl(
-            vehicle_price_vnd=vehicle_price,
-            loan_percentage=int(new_pct),
-            duration_months=int(new_term),
+            vehicle_price_vnd=price,
+            loan_percentage=int(draft_pct),
+            duration_months=int(draft_term),
         )
-
         m1, m2 = st.columns(2)
         m1.metric("Trả trước", fmt_vnd(result["down_payment_vnd"]))
         m2.metric("Trả góp / tháng", fmt_vnd(result["monthly_payment_vnd"]))
         st.caption(result["disclaimer"])
 
-        if int(new_pct) != prev_pct:
-            telemetry_logger.log_correction(
-                {
-                    "field": "loan_percentage",
-                    "from": prev_pct,
-                    "to": int(new_pct),
-                    "session_id": st.session_state.session_id,
-                }
+        dirty = int(draft_pct) != committed_pct or int(draft_term) != int(
+            st.session_state.loan_term
+        )
+        if dirty:
+            st.warning(
+                f"Bạn đang xem thử mức **{draft_pct}% / {draft_term} tháng**. "
+                "Nhấn xác nhận để VSSA ghi nhớ làm mặc định cho các lượt sau."
             )
-            telemetry_metrics.incr_correction()
-            st.session_state.user_context["loan_preference_pct"] = int(new_pct)
-            st.session_state.loan_pct = int(new_pct)
-        st.session_state.loan_term = int(new_term)
+            if st.button("✅ Xác nhận thay đổi", key=f"confirm_{turn_key}"):
+                telemetry_logger.log_correction(
+                    {
+                        "field": "loan_percentage",
+                        "from": committed_pct,
+                        "to": int(draft_pct),
+                        "term_from": int(st.session_state.loan_term),
+                        "term_to": int(draft_term),
+                        "session_id": st.session_state.session_id,
+                    }
+                )
+                telemetry_metrics.incr_correction()
+                st.session_state.user_context["loan_preference_pct"] = int(draft_pct)
+                st.session_state.loan_term = int(draft_term)
+                st.toast("Đã ghi nhận. AI sẽ áp dụng từ lượt sau.", icon="✅")
+                st.rerun()
+        else:
+            st.caption("_Mức hiện tại trùng với trí nhớ đã lưu._")
 
 
-def _list_showrooms_for(model_id: str) -> list[dict[str, Any]]:
-    result = _find_showrooms_impl(model_id=model_id)
-    if not result.get("found"):
-        return []
-    return [result["recommended_showroom"], *result.get("alternatives", [])]
+def render_inline_actions(vehicle: dict[str, Any], turn_key: str) -> None:
+    """Render the CTA buttons + loan expander for the LATEST vehicle payload."""
+    render_vehicle_summary(vehicle)
 
-
-def render_booking_section(vehicle: dict[str, Any]) -> None:
-    model_id = vehicle.get("model_id")
-    if not model_id:
-        return
-
-    step = st.session_state.booking_step
-    if step == "idle":
-        if st.button("📅 Đặt lịch lái thử", type="primary"):
-            st.session_state.booking_step = "form"
+    col_loan, col_book = st.columns(2)
+    with col_loan:
+        if not st.session_state.show_loan:
+            if st.button(
+                "💰 Xem phương án trả góp", key=f"show_loan_{turn_key}"
+            ):
+                st.session_state.show_loan = True
+                st.rerun()
+    with col_book:
+        if st.button(
+            "📅 Đặt lịch lái thử",
+            type="primary",
+            key=f"book_{turn_key}",
+        ):
+            model_id = vehicle.get("model_id", "")
+            st.session_state.pending_user_input = (
+                f"Tôi muốn đặt lịch lái thử {model_id}."
+            )
             st.rerun()
-        return
-    if step == "form":
-        _render_booking_form(model_id)
-        return
-    if step == "confirm":
-        _render_booking_confirm()
-        return
-    if step == "done":
-        _render_booking_done()
 
-
-def _render_booking_form(model_id: str) -> None:
-    showrooms = _list_showrooms_for(model_id)
-    if not showrooms:
-        st.warning(
-            "Hiện chưa có showroom hỗ trợ lái thử mẫu xe này. "
-            "Hãy trao đổi với saler để được tư vấn kỹ hơn."
-        )
-        if st.button("Quay lại"):
-            st.session_state.booking_step = "idle"
-            st.rerun()
-        return
-
-    with st.form("booking_form", clear_on_submit=False):
-        st.markdown("**Thông tin liên hệ**")
-        name = st.text_input("Họ và tên *")
-        phone = st.text_input("Số điện thoại *")
-
-        st.markdown("**Địa điểm & thời gian**")
-        sr_idx = st.selectbox(
-            "Showroom bạn muốn lái thử *",
-            options=list(range(len(showrooms))),
-            format_func=lambda i: f"{showrooms[i]['showroom_name']} — {showrooms[i]['address']}",
-        )
-        chosen_sr = showrooms[sr_idx]
-        slot = st.selectbox(
-            "Khung giờ *",
-            options=chosen_sr["all_upcoming_slots"],
-            format_func=fmt_slot,
-        )
-
-        c1, c2 = st.columns(2)
-        submit = c1.form_submit_button("Xem lại", type="primary")
-        cancel = c2.form_submit_button("Huỷ")
-
-    if cancel:
-        st.session_state.booking_step = "idle"
-        st.rerun()
-    if submit:
-        if not name.strip() or not phone.strip():
-            st.error("Vui lòng nhập đầy đủ họ tên và số điện thoại.")
-            return
-        st.session_state.booking_draft = {
-            "name": name.strip(),
-            "phone": phone.strip(),
-            "model_id": model_id,
-            "showroom": chosen_sr,
-            "slot": slot,
-        }
-        st.session_state.booking_step = "confirm"
-        st.rerun()
-
-
-def _render_booking_confirm() -> None:
-    d = st.session_state.booking_draft or {}
-    sr = d.get("showroom", {})
-    st.info(
-        "**Vui lòng xác nhận lịch lái thử**  \n\n"
-        f"- Khách hàng: **{d.get('name', '—')}** — {d.get('phone', '—')}  \n"
-        f"- Mẫu xe: **{d.get('model_id', '—')}**  \n"
-        f"- Showroom: **{sr.get('showroom_name', '—')}**  \n"
-        f"  {sr.get('address', '')}  \n"
-        f"- Thời gian: **{fmt_slot(d.get('slot', ''))}**"
-    )
-    c1, c2 = st.columns(2)
-    if c1.button("✅ Xác nhận", type="primary"):
-        telemetry_logger.log_booking(
-            {
-                "name": d["name"],
-                "phone": d["phone"],
-                "model_id": d["model_id"],
-                "showroom_id": sr.get("showroom_id"),
-                "showroom_name": sr.get("showroom_name"),
-                "showroom_address": sr.get("address"),
-                "slot": d["slot"],
-                "session_id": st.session_state.session_id,
-            }
-        )
-        telemetry_metrics.incr_lead()
-        telemetry_metrics.persist()
-        st.session_state.booking_step = "done"
-        st.rerun()
-    if c2.button("Quay lại"):
-        st.session_state.booking_step = "form"
-        st.rerun()
-
-
-def _render_booking_done() -> None:
-    d = st.session_state.booking_draft or {}
-    sr = d.get("showroom", {})
-    st.success(
-        f"✅ Đã ghi nhận lịch lái thử cho **{d.get('name')}**.  \n"
-        f"Showroom **{sr.get('showroom_name')}** sẽ liên hệ qua **{d.get('phone')}** "
-        f"trước **{fmt_slot(d.get('slot', ''))}**."
-    )
-    if st.button("Đặt lịch khác"):
-        st.session_state.booking_step = "idle"
-        st.session_state.booking_draft = None
-        st.rerun()
+    if st.session_state.show_loan:
+        render_loan_inline(vehicle, turn_key)
 
 
 # ---------------------------------------------------------------------------
-# Chat panel (with scrollable history + skeleton placeholder)
+# Chat rendering + turn processing
 # ---------------------------------------------------------------------------
 
 
-def render_chat_history():
-    """Render past messages inside a fixed-height scroll container."""
-    container = st.container(height=520, border=True)
+def _latest_vehicle_turn_idx() -> int:
+    """Index of the most recent assistant entry whose payload has a vehicle."""
+    for i in range(len(st.session_state.chat_history) - 1, -1, -1):
+        entry = st.session_state.chat_history[i]
+        if entry["role"] == "assistant":
+            payload = entry.get("payload") or {}
+            if payload.get("vehicle"):
+                return i
+    return -1
+
+
+def render_chat(container) -> None:
+    latest_vehicle_idx = _latest_vehicle_turn_idx()
     with container:
         if not st.session_state.chat_history:
             st.caption(
                 "👋 Chào bạn! Hãy mô tả ngân sách và nhu cầu — VSSA sẽ gợi ý "
                 "mẫu xe phù hợp."
             )
-        for role, content in st.session_state.chat_history:
-            with st.chat_message(role):
-                st.markdown(content)
-    return container
+            if st.button(f'💬 Dùng câu hỏi mẫu'):
+                st.session_state.pending_user_input = DEFAULT_QUERY
+                st.rerun()
+
+        for idx, entry in enumerate(st.session_state.chat_history):
+            with st.chat_message(entry["role"]):
+                if entry["content"]:
+                    st.markdown(entry["content"])
+
+                # Inline CTAs attach ONLY to the most recent vehicle
+                # recommendation, so old turns stay static.
+                if entry["role"] == "assistant" and idx == latest_vehicle_idx:
+                    vehicle = (entry.get("payload") or {}).get("vehicle")
+                    if vehicle:
+                        st.session_state.last_vehicle = vehicle
+                        render_inline_actions(vehicle, turn_key=f"turn{idx}")
+
+                # Booking confirmation styled success message.
+                if entry["role"] == "assistant":
+                    payload = entry.get("payload") or {}
+                    if payload.get("cta") == "test_drive_booked":
+                        sr = payload.get("showroom") or {}
+                        st.success(
+                            f"✅ Đã chốt lịch lái thử tại "
+                            f"**{sr.get('showroom_name', '—')}** "
+                            f"({sr.get('address', '')}) "
+                            f"lúc **{fmt_slot(sr.get('slot', ''))}**."
+                        )
 
 
-def process_user_message(prompt: str, chat_container) -> None:
+def process_user_message(prompt: str, container) -> None:
     """Append user msg, show skeleton, invoke agent, swap in real reply, rerun."""
-    st.session_state.chat_history.append(("user", prompt))
+    st.session_state.chat_history.append(
+        {"role": "user", "content": prompt, "payload": None}
+    )
     if user_mentioned_loan(prompt):
         st.session_state.show_loan = True
 
     placeholder = None
-    with chat_container:
+    with container:
         with st.chat_message("user"):
             st.markdown(prompt)
         with st.chat_message("assistant"):
@@ -460,17 +408,19 @@ def process_user_message(prompt: str, chat_container) -> None:
 
     cleaned = strip_json_block(reply)
     if placeholder is not None:
-        placeholder.markdown(cleaned)
-    st.session_state.chat_history.append(("assistant", cleaned))
+        placeholder.markdown(cleaned or "_(không có phản hồi)_")
 
     payload = parse_agent_payload(reply)
-    if payload:
-        st.session_state.last_payload = payload
-        if "loan" in payload:
-            st.session_state.show_loan = True
-            loan = payload["loan"]
-            st.session_state.loan_pct = int(loan.get("loan_percentage", 70))
-            st.session_state.loan_term = int(loan.get("duration_months", 96))
+    st.session_state.chat_history.append(
+        {"role": "assistant", "content": cleaned, "payload": payload}
+    )
+
+    if payload and payload.get("vehicle"):
+        st.session_state.last_vehicle = payload["vehicle"]
+    if payload and "loan" in payload:
+        st.session_state.show_loan = True
+        loan = payload["loan"]
+        st.session_state.loan_term = int(loan.get("duration_months", 96))
 
     st.rerun()
 
@@ -485,34 +435,24 @@ def main() -> None:
     render_sidebar()
 
     st.title("VSSA — VinFast Smart Sales Agent")
-    st.caption("Trợ lý bán hàng VinFast — tư vấn xe & đặt lịch lái thử trong 1 phút.")
+    st.caption(
+        "Trợ lý bán hàng VinFast — tư vấn xe, tính trả góp & đặt lịch lái thử."
+    )
 
-    left, right = st.columns([1, 1], gap="large")
+    chat_container = st.container(height=600, border=True)
+    render_chat(chat_container)
 
-    with left:
-        st.subheader("Tư vấn xe")
-        chat_container = render_chat_history()
+    # `st.chat_input` MUST live at top level (outside any column) to be docked
+    # to the bottom of the viewport — Streamlit only pins it when not nested.
+    typed = st.chat_input("Bạn cần tư vấn gì?")
+    if typed:
+        st.session_state.pending_user_input = typed
+        st.rerun()
 
-    payload = st.session_state.last_payload
-    with right:
-        if payload and payload.get("vehicle"):
-            vehicle = payload["vehicle"]
-            render_vehicle_card(vehicle)
-            render_loan_section(vehicle)
-            render_booking_section(vehicle)
-        else:
-            st.info("Hãy gửi câu hỏi tư vấn ở khung chat bên trái để bắt đầu.")
-
-    # `st.chat_input` MUST live at top-level (outside columns) to be pinned to
-    # the bottom of the viewport — Streamlit only docks it when not nested.
-    prompt = st.chat_input("Bạn cần tư vấn gì?")
-    if prompt:
-        process_user_message(prompt, chat_container)
-    elif not st.session_state.chat_history:
-        # Render the sample-question prompt below the (empty) chat container.
-        with left:
-            if st.button(f'💬 Dùng câu hỏi mẫu: "{DEFAULT_QUERY}"'):
-                process_user_message(DEFAULT_QUERY, chat_container)
+    # Drain any queued input (from chat_input OR inline buttons).
+    pending = st.session_state.pop("pending_user_input", None)
+    if pending:
+        process_user_message(pending, chat_container)
 
 
 main()
