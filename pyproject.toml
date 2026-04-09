@@ -1,0 +1,31 @@
+[project]
+name = "vssa"
+version = "0.1.0"
+description = "VinFast Smart Sales Agent (VSSA)"
+requires-python = ">=3.12"
+dependencies = [
+    "langgraph>=0.2.50",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "openai>=1.40.0",
+    "pydantic>=2.7.0",
+    "streamlit>=1.36.0",
+    "pandas>=2.2.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"vssa_agent" = ["prompts/*.txt"]
