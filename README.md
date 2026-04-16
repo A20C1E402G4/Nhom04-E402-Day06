@@ -1,174 +1,62 @@
-# VSSA — VinFast Smart Sales Agent
+# VinFast Smart Sales Agent (VSSA) 🚗⚡
 
-> **AI Product Hackathon · Track: VinFast · Nhóm 04**
->
-> Khách hàng mua xe điện thường bị "ngợp" bởi thông số kỹ thuật, bài toán chi phí thuê pin và các gói vay.
-> VSSA là Agent thông minh giúp cá nhân hoá tư vấn 24/7, tự động lập phương án tài chính và chốt lịch lái thử trong 1
-> phút.
+VSSA là trợ lý bán hàng AI thế hệ mới, được tối ưu hóa riêng cho hệ sinh thái xe điện VinFast. Sử dụng kiến trúc **LangGraph (Stateful Agentic Workflow)**, VSSA không chỉ trả lời câu hỏi mà còn chủ động dẫn dắt khách hàng từ khâu chọn xe, lập phương án tài chính đến chốt lịch lái thử trong 1 phút.
 
 ---
 
-## Demo — Case 1: Personal Sales Concierge
+## 🌟 Tính năng đột phá
 
-The primary flow: a customer states their budget and family size, the agent recommends a vehicle, calculates a
-financing plan, and books a test drive — all within a single chat session.
-
-```
-User  → "Tôi có 800 triệu, nhà 4 người, ở chung cư, nên mua xe nào?"
-Agent → [calls get_all_vehicles → get_vehicle_data → calculate_loan]
-      → "VF 7 base phù hợp nhất. Trả trước 255tr, góp ~8.5tr/tháng."
-      → [renders vehicle card + loan table in sidebar]
-
-User  → "Cho tôi đặt lịch lái thử"
-Agent → "Bạn đang ở khu vực nào?" → [calls find_showrooms]
-      → "VinFast Thảo Điền, 9:00 sáng mai. Cho mình tên và SĐT?"
-      → [calls book_test_drive] → confirms booking
-```
+*   **Tư vấn cá nhân hóa (Personal Sales Expert):** Đề xuất dòng xe (VF 3, VF 5, VF 7,...) dựa trên ngân sách, thói quen di chuyển và số lượng thành viên gia đình.
+*   **Chuyên gia tài chính (Smart Finance Planner):** Tự động tính toán tiền trả trước, gốc + lãi hàng tháng theo từng gói vay (80%, 24 tháng, 8 năm) và chính sách thuê pin/mua pin.
+*   **Tối ưu lịch lái thử (Test Drive Optimizer):** Tìm kiếm showroom gần nhất qua Google Maps API, kiểm tra tình trạng xe demo và xác nhận lịch hẹn tức thì.
+*   **Mạng lưới trạm sạc (Power Station Hub):** Tra cứu nhanh trạm sạc AC/DC quanh khu vực khách sống để giải quyết triệt để nỗi lo về hạ tầng.
+*   **Giao diện tương tác Live (Reactive UI):** Tự động cập nhật số liệu tư vấn khi người dùng điều chỉnh thông số trên thanh kéo (Slider) hoặc nút chọn.
 
 ---
 
-## Table of Contents
+## 🛠 Công nghệ sử dụng
 
-1. [Product Canvas](#1-product-canvas)
-2. [Architecture](#2-architecture)
-3. [Getting Started](#3-getting-started)
-4. [Agent Tools](#4-agent-tools)
-5. [Data](#5-data)
-6. [UI & UX Paths](#6-ui--ux-paths)
-7. [Learning Signal & Data Flywheel](#7-learning-signal--data-flywheel)
-8. [Evaluation Metrics](#8-evaluation-metrics)
-9. [Failure Modes & Mitigations](#9-failure-modes--mitigations)
-10. [Testing](#10-testing)
-11. [Project Structure](#11-project-structure)
-12. [Team](#12-team)
+| Thành phần | Công nghệ |
+| :--- | :--- |
+| **Logic Core** | LangGraph (Stateful Multi-turn Agent) |
+| **Mô hình ngôn ngữ** | GPT-4o / Gemini 1.5 Flash / Qwen 2.5 (Local) |
+| **Giao diện** | Streamlit (Python-based Web App) |
+| **Lưu trữ** | SQLite (Conversation Memory) & JSON (Product Data) |
+| **Theo dõi** | Lead Generation Telemetry & JSONL Logging |
 
 ---
 
-## 1. Product Canvas
+## 🚀 Hướng dẫn cài đặt & Thực thi
 
-|              | Value                                                                                | Trust                                                                          | Feasibility                                                                  |
-|--------------|--------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| **Question** | Who is the user? What is the pain? What does AI solve?                               | What if AI is wrong? How does the user correct it?                             | Cost/latency? Main risk?                                                     |
-| **Answer**   | First-time EV buyers afraid of complex calculations. AI acts as a 24/7 Sales Expert. | AI may quote wrong price/promo. Always shows disclaimer + link to source data. | ~$0.2/session. Latency <5s. Risk: hallucination on specs not yet in dataset. |
-
-**Automation vs. Augmentation:** Augmentation — AI is the funnel that guides the customer. Contract signing and
-vehicle handover still require a human for legal and experiential reasons.
-
-**ROI Scenarios:**
-
-|            | Conservative             | Realistic                      | Optimistic                             |
-|------------|--------------------------|--------------------------------|----------------------------------------|
-| Volume     | 1,000 customers/month    | 5,000 customers/month          | 20,000 customers/month                 |
-| Cost       | $200                     | $800                           | $2,500                                 |
-| Output     | 50 leads                 | 500 leads                      | 3,000 leads + 200 test drives          |
-| Equivalent | Cheaper than 1 sales rep | Matches a 10-person sales team | Becomes a primary global sales channel |
-
-**Kill criteria:** Stop if cost-per-lead from AI exceeds traditional advertising for 3 consecutive months.
-
----
-
-## 2. Architecture
-
-```
-┌─────────────────────────────────────────┐
-│           Streamlit UI                  │
-│  Single-column chat · Fixed input bar   │
-│  Sidebar: model selector, vehicle card, │
-│  loan panel, memory, feedback           │
-│  Streaming status per LangGraph node    │
-└──────────────────┬──────────────────────┘
-                   │  invoke_agent() generator
-                   ▼
-┌─────────────────────────────────────────┐
-│         LangGraph StateGraph            │
-│                                         │
-│  agent_node ──► tools_condition         │
-│      ▲                │                 │
-│      └──── ToolNode ◄─┘                 │
-│                                         │
-│  State:  messages + user_context        │
-│          + tool_turns (max 3)           │
-│  Memory: SqliteSaver → vssa_state.sqlite│
-└──────────┬───────────────┬──────────────┘
-           │               │
-    ┌──────┴──────┐  ┌──────┴────────────────┐
-    │  LLM Layer  │  │  7 Tools              │
-    │             │  │                       │
-    │ OpenAI      │  │ get_all_vehicles      │
-    │ GPT-4o      │  │ get_vehicle_data      │
-    │   OR        │  │ calculate_loan        │
-    │ Ollama      │  │ get_promotion         │
-    │ Qwen 2.5 /  │  │ find_showrooms        │
-    │ Llama 3.2   │  │ find_charging_stations│
-    └─────────────┘  │ book_test_drive       │
-                     └───────────────────────┘
-                               │
-                  ┌────────────┴────────────┐
-                  ▼                         ▼
-           data/*.json                logs/*.jsonl
-           (mock data)                (flywheel)
-```
-
-### Agent State
-
-```python
-class UserContext(TypedDict, total=False):
-    budget_vnd: int
-    family_size: int
-    housing: str  # "apartment" | "house"
-    loan_preference_pct: int
-    preferred_model: str
-    location_hint: str
-
-
-class AgentState(TypedDict):
-    messages: Annotated[list[AnyMessage], add_messages]
-    user_context: UserContext
-    tool_turns: int  # hard stop at 3
-```
-
----
-
-## 3. Getting Started
-
-### Prerequisites
-
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) package manager
-- OpenAI API key **OR** [Ollama](https://ollama.com) running locally
-
-### Installation
+### 1. Chuẩn bị môi trường
+Yêu cầu Python 3.10+. Khuyến khích dùng `venv`.
 
 ```bash
-git clone https://github.com/A20C1E402G4/vssa.git
-cd vssa
+# Clone dự án
+git clone <repository_url>
+cd Nhom04-E402-Day06
 
-# Install dependencies
-uv sync
+# Tạo và kích hoạt môi trường ảo
+python -m venv .venv
+# Windows:
+.\.venv\Scripts\activate
+# Linux/Mac:
+source .venv/bin/activate
 
-# Configure environment
-cp .env.example .env
-# Edit .env and set OPENAI_API_KEY
+# Cài đặt thư viện
+pip install -r requirements.txt
 ```
 
-### Run
+### 2. Cấu hình API Key
+Tạo file `.env` tại thư mục gốc từ mẫu `.env.example`:
 
-```bash
-uv run streamlit run app/streamlit_app.py
+```env
+OPENAI_API_KEY=your_openai_key_here
+GEMINI_API_KEY=your_gemini_key_here
+LLM_PROVIDER=gemini  # Tùy chọn: openai, gemini, hoặc local
 ```
 
-Open `http://localhost:8501` in your browser.
-
-### Local Model (Optional)
-
-```bash
-# Install Ollama from https://ollama.com
-ollama pull qwen2.5
-# Switch to "Local — Qwen 2.5" in the sidebar model selector
-```
-
-### Run Tests
-
+### 3. Chạy ứng dụng
 ```bash
 uv run pytest -q
 # Expected: 17 passed
@@ -298,138 +186,26 @@ User adjusts the loan plan in the sidebar → clicks **Xác nhận** → agent r
 
 ---
 
-## 7. Learning Signal & Data Flywheel
+## 📂 Kiến trúc dự án
 
-### Files Written (append-only JSONL)
-
-| File                        | Written when                              | What it captures                                          |
-|-----------------------------|-------------------------------------------|-----------------------------------------------------------|
-| `logs/agent.jsonl`          | Every LangGraph node execution            | Message trace, tool calls, node name, timestamp           |
-| `logs/bookings.jsonl`       | Successful `book_test_drive`              | Name, phone, model, showroom, slot → lead conversion      |
-| `logs/corrections.jsonl`    | User edits loan panel → clicks Xác nhận   | Original vs. corrected loan% and term → preference signal |
-| `logs/failed_intents.jsonl` | Agent hits 3-turn limit without resolving | Last user message, partial tool trace → coverage gaps     |
-| `logs/metrics.json`         | On demand                                 | Tool success rate, lead-gen recall                        |
-
-### Database (`vssa_state.sqlite`)
-
-`SqliteSaver` (LangGraph) stores the full `AgentState` keyed by `thread_id`.
-`thread_id` is a UUID written to `?thread_id=` in the browser URL — the conversation survives page refresh and
-can be resumed across browser sessions.
-
-### Flywheel Loop
-
-```
-Chat interaction → logs/*.jsonl (raw signal)
-                                    │
-              ┌─────────────────────┤
-              ▼                     ▼
-    Prompt refinement          Fine-tuning / DPO
-    (system_prompt.txt)        (future — not yet wired)
-              │
-              ▼
-    <user_profile> injected every turn
-    (in-session loop — active now)
-```
-
-The in-session loop is live. The offline training loop (RLHF/DPO from `corrections.jsonl`) is the next phase.
-
----
-
-## 8. Evaluation Metrics
-
-**Precision** — for pricing and financial data (must be 100% accurate):
-
-| Metric                 | Threshold | Red flag           |
-|------------------------|-----------|--------------------|
-| Price & spec accuracy  | 100%      | Any error on price |
-| Tool call success rate | > 95%     | < 80%              |
-| Lead gen rate          | ≥ 15%     | < 5%               |
-
-**Recall** — for sales conversion (cast a wide net):
-
-| Metric                     | Threshold | Red flag                            |
-|----------------------------|-----------|-------------------------------------|
-| Lead generation recall     | ≥ 90%     | < 70% (missed buyers)               |
-| Response rate              | 100%      | < 95%                               |
-| Engagement (turns/session) | > 5       | < 2 (user left after first message) |
-| Severe spec errors         | < 2%      | > 5%                                |
-
----
-
-## 9. Failure Modes & Mitigations
-
-| # | Failure                        | Consequence                                     | Mitigation                                                       |
-|---|--------------------------------|-------------------------------------------------|------------------------------------------------------------------|
-| 1 | API outdated / down            | Agent has no data to answer                     | Fallback response: apologise + auto-notify real sales rep        |
-| 2 | LLM hallucination in tool args | Agent invents a loan rate (e.g. 50%)            | Pydantic `args_schema` validates all inputs before tool executes |
-| 3 | Logic loop                     | Agent calls tools repeatedly without resolution | `tool_turns` hard limit of 3; then ask user for clarification    |
-
----
-
-## 10. Testing
-
-```bash
-uv run pytest -q   # 17 passed
-```
-
-### Coverage
-
-| File                        | Tests                                                                                                                                                                                           |
-|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `tests/test_tools.py`       | Schema rejection (bad loan%, duration, model ID); `calculate_loan` baseline VF7 @ 70%/96mo → ~8.5M/mo; showroom lookup; promo codes; booking validation + happy path with monkeypatched log dir |
-| `tests/test_agent_graph.py` | `ScriptedChatModel` fake LLM; asserts tool call sequence `["get_vehicle_data", "calculate_loan"]`; booking path calls `find_showrooms`                                                          |
-
----
-
-## 11. Project Structure
-
-```
-vssa/
-├── app/
-│   └── streamlit_app.py          # UI — 577 lines
-├── data/
-│   ├── vehicles.json             # 11 VinFast models
-│   ├── showrooms.json            # 11 showrooms (HN + HCM)
-│   ├── finance.json              # 2 banks, 2 promotions
-│   └── charging_stations.json   # 12 stations
-├── src/
-│   ├── core/
-│   │   ├── llm_provider.py       # Abstract LLMProvider base
-│   │   ├── openai_provider.py    # ChatOpenAI (GPT-4o)
-│   │   └── local_provider.py    # ChatOllama (Qwen 2.5 / Llama 3.2)
-│   ├── telemetry/
-│   │   ├── logger.py            # JSONL writers for all 4 log files
-│   │   └── metrics.py           # In-memory aggregates
-│   └── vssa_agent/
-│       ├── config.py            # Paths, env vars, lru_cache JSON loaders
-│       ├── state.py             # AgentState + UserContext TypedDicts
-│       ├── schemas.py           # Pydantic args_schema per tool
-│       ├── tools.py             # 7 tool implementations
-│       ├── graph.py             # LangGraph StateGraph
-│       └── prompts/
-│           └── system_prompt.txt
-├── tests/
-│   ├── test_tools.py            # 15 unit tests
-│   └── test_agent_graph.py      # 2 integration tests
-├── logs/                        # Auto-created, gitignored
-│   ├── agent.jsonl
-│   ├── bookings.jsonl
-│   ├── corrections.jsonl
-│   └── failed_intents.jsonl
-├── vssa_state.sqlite             # LangGraph cross-session checkpoints
-├── DEVLOG.md                    # Full development log + personal contribution
-└── pyproject.toml
+```text
+├── app/                  # Streamlit UI & Event Handlers
+├── data/                 # Catalog: Vehicles, Showrooms, Charging Stations
+├── src/vssa_agent/       # Brain of the system
+│   ├── graph.py          # LangGraph State Machine
+│   ├── tools.py          # Function Calling (Finance, Bookings, Search)
+│   └── prompts/          # System Prompts & Sales Persona
+├── telemetry/            # Logs for Lead Gen & Conversation Analysis
+└── tests/                # System Evaluation & Unit Tests
 ```
 
 ---
 
-## 12. Team
+## 🛡 Chiến lược an toàn & Chính xác
 
-| Member                | Role                           | Scope                                                                                                                      |
-|-----------------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| Trần Nhật Vĩ          | AI Research & Data             | Parts 1–3: Product canvas, user stories, data expansion (vehicles, charging stations), local LLM provider, streaming agent |
-| Trần Thanh Phong      | AI Engineer                    | Parts 4–6: Tools, graph, telemetry                                                                                         |
-| Nguyễn Tiến Huy Hoàng | Frontend Engineer              | Parts 1–3: UI overhaul, feedback UX, light-mode CSS                                                                        |
-| Hoàng Đinh Duy Anh    | AI Engineer & Integration Lead | Parts 4–6: Agent backend scaffolding, Streamlit integration, branch merges, testing, data integrity                        |
+1.  **Strict Accuracy:** Ưu tiên 100% chính xác về thông số giá và khuyến mãi thông qua việc truy vấn trực tiếp DB nội bộ.
+2.  **Smart Fallback:** Tự động phát hiện ý định ngoài phạm vi và gợi ý kết nối với nhân viên tư vấn thật.
+3.  **No Hallucinations:** Ràng buộc kết quả đầu ra bằng logic validation trước khi hiển thị cho người dùng.
 
 ---
+**Nhóm:** VinSales AI-Powered | **Sản phẩm tham dự AI Product Hackathon**
